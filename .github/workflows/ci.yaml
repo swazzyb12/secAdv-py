@@ -1,15 +1,14 @@
-name: CI
+name: Security Scan
 
 on:
   pull_request:
     branches: [main, dev]
   schedule:
-    - cron: "0 0 * * 0" # Weekly scan
+    - cron: "0 0 * * 0" # Weekly scan (fixed spacing)
 
 jobs:
-  build:
+  security-checks:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -27,10 +26,9 @@ jobs:
       - name: Run tests
         run: |
           echo "Running tests..."
-          # Add your test commands here
           python -m unittest discover
 
-      - name: Perform SAST scan
+      - name: Initialize CodeQL
         uses: github/codeql-action/init@v1
         with:
           languages: python
@@ -40,14 +38,14 @@ jobs:
 
       - name: Check for vulnerable dependencies
         uses: github/dependency-review-action@v2
-
+        
       - name: Check for secrets
-        uses: google/secrets-sync-action@v1
-        with:
-          secrets_filename: secrets.json
-          verify: true
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Fail the PR if any security checks fail
-  rules:
-    - if: failure()
-      run: echo "Security checks failed. Please address the issues before merging."
+      - name: Security check status
+        if: ${{ failure() }}
+        run: |
+          echo "Security checks failed. Please address the issues before merging."
+          exit 1
