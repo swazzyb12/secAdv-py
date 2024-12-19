@@ -1,10 +1,10 @@
-name: CI
+name: Security Scan
 
 on:
   pull_request:
     branches: [main, dev]
   schedule:
-    - cron: "0 0 * * 0" # Weekly scan (fixed spacing)
+    - cron: "0 0 * * 0" # Weekly scan
 
 jobs:
   security-checks:
@@ -36,9 +36,11 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v1
 
-      - name: Check for vulnerable dependencies
-        uses: github/dependency-review-action@v2
-        
+      - name: Check dependencies with safety
+        run: |
+          pip install safety
+          safety check
+
       - name: Check for secrets
         uses: gitleaks/gitleaks-action@v2
         env:
