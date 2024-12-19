@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  schedule:
+    - cron: "0 0 * * 0" # Weekly scan
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run tests
+        run: |
+          echo "Running tests..."
+          # Add your test commands here
+          python -m unittest discover
+
+      - name: Perform SAST scan
+        uses: github/codeql-action/init@v1
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
+
+      - name: Check for vulnerable dependencies
+        uses: github/dependency-review-action@v2
+
+      - name: Check for secrets
+        uses: google/secrets-sync-action@v1
+        with:
+          secrets_filename: secrets.json
+          verify: true
+
+  # Fail the PR if any security checks fail
+  rules:
+    - if: failure()
+      run: echo "Security checks failed. Please address the issues before merging."
